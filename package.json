@@ -1,5 +1,11 @@
 {
   "dependencies": {
-    "acorn": "^8.4.0"
+    "@types/node": "^15.12.2",
+    "acorn": "^8.4.0",
+    "ts-morph": "^11.0.0",
+    "typescript-parser": "^2.6.1"
+  },
+  "scripts": {
+    "start": "tsc -p . && node outts/index.js"
   }
 }
