@@ -7,11 +7,7 @@ let indent_number: number = 0;
 let on_load: Array<string> = [];
 let skript: string = "";
 
-fs.readdirSync('./src').forEach(file => {
-	skript += convertFile(fs.readFileSync('./src/' + file).toString());
-});
-
-
+skript += convertFile(fs.readFileSync('./src/index.ts').toString());
 if (on_load.length >= 1) {
 	skript += "on load:\n";
 	on_load.forEach(line => {
@@ -64,6 +60,55 @@ function funcCall (node: ts.Node): string {
 	return `${node.getFirstChildByKind(ts.SyntaxKind.Identifier)?.getText()}(${args})`;
 }
 
+//@ts-ignore
+function getAllChildrenName(node: ts.Node) { 
+	
+	node.forEachChild((child) => {
+		console.log(child.getText())
+		console.log(child.getKindName())
+	})
+}
+
+function parseFunctionBody(node: ts.Node): string {
+	let function_body = node.getFirstChildByKind(ts.SyntaxKind.Block);
+	let func_body_str = "";
+	indent_number += 1;
+	function_body?.forEachChild(function_node => {
+
+		func_body_str += "\n" + parseNode(function_node);
+	});
+	indent_number -= 1;
+	return func_body_str
+}
+
+function parseFunction(node: ts.Node, afn?: string): string {
+	// @ts-expect-error
+	let function_return_type = node.getReturnType().getText();
+	// @ts-expect-error
+	let functions_args = node.getParameters();
+	
+	let args = "";
+	if (functions_args) {
+		functions_args.forEach((arg: ts.Node, index: number) => {
+			if (index < functions_args.length - 1) {
+				args += arg.getText() + ",";
+			} else {
+				args += arg.getText();
+			}
+
+		});
+	}
+	let func_body_str = parseFunctionBody(node);
+	func_body_str = func_body_str.split("{").join("{_"); // Make all vars private vars.
+	if (node.getChildrenOfKind(ts.SyntaxKind.Identifier)[0]) {
+		if (function_return_type != "void") return `function ${node.getChildrenOfKind(ts.SyntaxKind.Identifier)[0].getText()}(${args}) :: ${function_return_type}:${func_body_str}`;
+		return `function ${node.getChildrenOfKind(ts.SyntaxKind.Identifier)[0].getText()}(${args}):${func_body_str}`;
+	} else {
+		if (function_return_type != "void") return `function arrow_function_${afn}(${args}) :: ${function_return_type}:${func_body_str}`;
+		return `function arrow_function_${afn}(${args}):${func_body_str}`;		
+	}
+	return ""
+}
 
 function parseNode (node: ts.Node, format: boolean = true): string {
 	switch (node.getKindName()) {
@@ -71,6 +116,20 @@ function parseNode (node: ts.Node, format: boolean = true): string {
 			// @ts-expect-error
 			return parseNode(node.getExpression());
 		case 'CallExpression':
+			if (node.getFirstChildByKind(ts.SyntaxKind.PropertyAccessExpression)) {
+				let expr = node.getFirstChildByKind(ts.SyntaxKind.PropertyAccessExpression)
+				if (expr?.getFirstChild()?.getText() === "minecraft") {
+					//let identifier = expr?.getFirstChild()
+					if (expr?.getText() === "minecraft.on") {
+						let func = node.getFirstChildByKind(ts.SyntaxKind.ArrowFunction) as ts.Node
+						let body = parseFunctionBody(func)
+						let text = node.getChildAtIndex(2).getFirstChildByKind(ts.SyntaxKind.StringLiteral)?.getLiteralText()
+						return `on ${text}:${body}`
+						
+					}
+				}
+
+			}
 			return nodeReturn(funcCall(node), format);
 		case 'StringLiteral':
 			return node.getText();
@@ -97,35 +156,12 @@ function parseNode (node: ts.Node, format: boolean = true): string {
 			});
 			return nodeReturn(str);
 		case 'FunctionDeclaration':
-			let function_body = node.getFirstChildByKind(ts.SyntaxKind.Block);
-			// @ts-expect-error
-			let function_return_type = node.getReturnType().getText();
-			// @ts-expect-error
-			let functions_args = node.getParameters();
-			let func_body_str = "";
-			let args = "";
-			if (functions_args) {
-				functions_args.forEach((arg: ts.Node, index: number) => {
-					if (index < functions_args.length - 1) {
-						args += arg.getText() + ",";
-					} else {
-						args += arg.getText();
-					}
-
-				});
-			}
-			indent_number += 1;
-			function_body?.forEachChild(function_node => {
-
-				func_body_str += parseNode(function_node) + "\n";
-			});
-			indent_number -= 1;
-			func_body_str = func_body_str.split("{").join("{_"); // Make all vars private vars.
-			if (function_return_type) return `function ${node.getChildrenOfKind(ts.SyntaxKind.Identifier)[0].getText()}(${args}) :: ${function_return_type}:\n${func_body_str}`;
-			return `function ${node.getChildrenOfKind(ts.SyntaxKind.Identifier)[0].getText()}(${args}):\n${func_body_str}`;
+			return parseFunction(node)
 		case 'ReturnStatement':
 			return nodeReturn(`return ${parseNode(node.getLastChild() as ts.Node)}`);
 		case 'EndOfFileToken':
+			return "";
+		case 'ImportDeclaration':
 			return "";
 		default:
 			console.log("new: " + node.getKindName());
