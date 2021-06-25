@@ -120,12 +120,14 @@ function parseNode (node: ts.Node, format: boolean = true): string {
 			if (node.getFirstChildByKind(ts.SyntaxKind.PropertyAccessExpression)) {
 				let expr = node.getFirstChildByKind(ts.SyntaxKind.PropertyAccessExpression);
 				if (expr?.getFirstChild()?.getText() === vars.defaultLib) {
-					if (expr?.getText() === vars.defaultLib + ".on") {
-						let func = node.getFirstChildByKind(ts.SyntaxKind.ArrowFunction) as ts.Node;
-						let body = parseFunctionBody(func);
-						let text = node.getChildAtIndex(2).getFirstChildByKind(ts.SyntaxKind.StringLiteral)?.getLiteralText();
-						return `on ${text}:${body}`;
-
+					switch (expr?.getText().substring(vars.defaultLib.length + 1)) {
+						case 'on':
+							let func = node.getFirstChildByKind(ts.SyntaxKind.ArrowFunction) as ts.Node;
+							let body = parseFunctionBody(func);
+							let text = node.getChildAtIndex(2).getFirstChildByKind(ts.SyntaxKind.StringLiteral)?.getLiteralText();
+							return `on ${text}:${body}`;
+						default:
+							debugger
 					}
 				}
 
