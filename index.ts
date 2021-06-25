@@ -6,6 +6,7 @@ const project = new ts.Project();
 let indent_number: number = 0;
 let on_load: Array<string> = [];
 let skript: string = "";
+let vars: {[key: string] : any} = {}
 
 skript += convertFile(fs.readFileSync('./src/index.ts').toString());
 if (on_load.length >= 1) {
@@ -118,9 +119,8 @@ function parseNode (node: ts.Node, format: boolean = true): string {
 		case 'CallExpression':
 			if (node.getFirstChildByKind(ts.SyntaxKind.PropertyAccessExpression)) {
 				let expr = node.getFirstChildByKind(ts.SyntaxKind.PropertyAccessExpression)
-				if (expr?.getFirstChild()?.getText() === "minecraft") {
-					//let identifier = expr?.getFirstChild()
-					if (expr?.getText() === "minecraft.on") {
+				if (expr?.getFirstChild()?.getText() === vars.defaultLib) {
+					if (expr?.getText() === vars.defaultLib + ".on") {
 						let func = node.getFirstChildByKind(ts.SyntaxKind.ArrowFunction) as ts.Node
 						let body = parseFunctionBody(func)
 						let text = node.getChildAtIndex(2).getFirstChildByKind(ts.SyntaxKind.StringLiteral)?.getLiteralText()
@@ -162,6 +162,10 @@ function parseNode (node: ts.Node, format: boolean = true): string {
 		case 'EndOfFileToken':
 			return "";
 		case 'ImportDeclaration':
+			//The imported lib
+			if( node.getChildren()[3].getText().substring(1,node.getChildren()[3].getText().length - 1) === "minecraft") {
+				vars.defaultLib = node.getChildren()[1].getText()
+			}
 			return "";
 		default:
 			console.log("new: " + node.getKindName());
