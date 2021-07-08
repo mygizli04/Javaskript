@@ -43,6 +43,7 @@ export class Parser {
 		if (this.nodes[Node.getKindName()]) {
 			return this.nodes[Node.getKindName()].return(Node, this, format)
 		} else {
+			debugger
 			return ""
 		}
 	}

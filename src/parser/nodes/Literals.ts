@@ -1,7 +1,13 @@
 import * as ts from 'ts-morph';
 import { Parser } from '../index'
 
-module.exports = {
+let exprt: {
+	name: string,
+	list: Array<{
+		name: string,
+		return: (node: ts.Node, parser: Parser, format: boolean) => string
+	}>
+} = {
 	name: "list",
 	list: [
 		{
@@ -23,6 +29,18 @@ module.exports = {
 			}
 		},
 		{
+			name: "TrueKeyword",
+			return: (node: ts.Node, parser: Parser, format: boolean) => {
+				return "true"
+			}
+		},
+		{
+			name: "FalseKeyword",
+			return: (node: ts.Node, parser: Parser, format: boolean) => {
+				return "false"
+			}
+		},
+		{
 			name: "EndOfFileToken",
 			return: (node: ts.Node, parser: Parser, format: boolean) => {
 				return ""
@@ -31,3 +49,4 @@ module.exports = {
 	]
 }
 
+module.exports = exprt
